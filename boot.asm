@@ -2,6 +2,7 @@ global start
 
 section .text
 bits 32
+
 start:
     ; point first entry of level 4 page
     ; to first entry of p3 table
@@ -65,6 +66,17 @@ start:
 
     lgdt [gdt64.pointer] ; load global descriptor table (GDT)
 
+    ; update selectors
+    
+    mov ax, gdt64.data
+    mov ss, ax ; set stack segment register
+    mov ds, ax ; data segment register (points to .data of GDT)
+    mov es, ax ; set extra segment register
+
+    ; jump into long mode
+   
+    jmp gdt64.code:long_mode_start ; update code selector register with GDT entry
+
     mov word [0xb8000], 0xDF48 ; H
     mov word [0xb8002], 0xDF65 ; e
     mov word [0xb8004], 0xDF6c ; l
@@ -84,7 +96,6 @@ start:
 ; for each level in the page table
 
 section .bss ; entries in bss section set to 0 by linker
-
 align 4096 ; make sure tables aligned properly
 
 p4_table:
@@ -118,3 +129,12 @@ gdt64:
 .pointer:
     dw .pointer - gdt64 - 1 ; calculate length
     dq gdt64 ; address of table
+
+section .text
+bits 64
+
+long_mode_start:
+    mov rax, 0x2f592f412f4b2f4f ; rax is 64-bit version of eax
+    mov qword [0xb8000], rax
+
+    hlt ; stop
