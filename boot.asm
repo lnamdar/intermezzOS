@@ -63,6 +63,8 @@ start:
     or eax, 1 << 16
     mov cr0, eax
 
+    lgdt [gdt64.pointer] ; load global descriptor table (GDT)
+
     mov word [0xb8000], 0xDF48 ; H
     mov word [0xb8002], 0xDF65 ; e
     mov word [0xb8004], 0xDF6c ; l
@@ -93,3 +95,26 @@ p3_table:
 
 p2_table:
     resb 4096
+
+section .rodata ; read-only data
+
+gdt64:
+    dq 0 ; define quad-word
+
+.code: equ $ - gdt64 ; get offset number
+
+    ; in order to have valid code segment, need:
+    ; bit 44: 'descriptor type' - 1 for code and data segments
+    ; bit 47: 'present' - 1 if valid entry
+    ; bit 41: 'read/ write' - 1 if readable code segment
+    ; bit 43: 'executable' - 1 if code segment
+    ; bit 53: '64-bit' - 1 if 64-bit GDT
+
+    dq (1 << 44) | (1 << 47) | (1 << 41) | (1 << 43) | (1 << 53)
+
+.data: equ $ - gdt64
+    dq (1 << 44) | (1 << 47) | (1 << 41) ; bit 41: 1 if data is writable
+
+.pointer:
+    dw .pointer - gdt64 - 1 ; calculate length
+    dq gdt64 ; address of table
